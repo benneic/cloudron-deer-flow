@@ -109,7 +109,7 @@ agents_api:
   enabled: false
 
 skill_evolution:
-  enabled: false
+  enabled: true
   moderation_model_name: null
 
 # Overridden at boot when CLOUDRON_POSTGRESQL_URL is set (see merge_runtime_config.py)
