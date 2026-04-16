@@ -1,0 +1,118 @@
+# Cloudron default — copy to /app/data/config.yaml on first boot.
+# Master reference: https://raw.githubusercontent.com/bytedance/deer-flow/refs/heads/main/config.example.yaml
+# API keys: set in the Cloudron dashboard as environment variables or in a .env file you mount.
+#
+# Default model is Ollama (langchain_ollama). The app container cannot reach Ollama at localhost —
+# set `base_url` to the host where Ollama listens (LAN IP, Tailscale, another server, etc.), port 11434.
+# The Docker image includes `deerflow-harness[ollama]` (langchain-ollama); no extra pip step needed on your side.
+
+config_version: 7
+log_level: info
+
+token_usage:
+  enabled: false
+
+models:
+  # Change `model` to a tag you have pulled in Ollama (e.g. llama3.2, qwen2.5).
+  # `base_url` must be reachable from this app — not 127.0.0.1 unless Ollama is published there on the same network namespace.
+  - name: ollama
+    display_name: Ollama
+    use: langchain_ollama:ChatOllama
+    model: llama3.2
+    base_url: http://192.168.1.100:11434
+    num_predict: 8192
+    temperature: 0.7
+    supports_thinking: false
+    supports_vision: false
+
+tool_groups:
+  - name: web
+  - name: file:read
+  - name: file:write
+  - name: bash
+
+tools:
+  - name: web_search
+    group: web
+    use: deerflow.community.ddg_search.tools:web_search_tool
+    max_results: 5
+  - name: web_fetch
+    group: web
+    use: deerflow.community.jina_ai.tools:web_fetch_tool
+    timeout: 10
+  - name: image_search
+    group: web
+    use: deerflow.community.image_search.tools:image_search_tool
+    max_results: 5
+  - name: ls
+    group: file:read
+    use: deerflow.sandbox.tools:ls_tool
+  - name: read_file
+    group: file:read
+    use: deerflow.sandbox.tools:read_file_tool
+  - name: glob
+    group: file:read
+    use: deerflow.sandbox.tools:glob_tool
+    max_results: 200
+  - name: grep
+    group: file:read
+    use: deerflow.sandbox.tools:grep_tool
+    max_results: 100
+  - name: write_file
+    group: file:write
+    use: deerflow.sandbox.tools:write_file_tool
+  - name: str_replace
+    group: file:write
+    use: deerflow.sandbox.tools:str_replace_tool
+  - name: bash
+    group: bash
+    use: deerflow.sandbox.tools:bash_tool
+
+tool_search:
+  enabled: false
+
+uploads:
+  pdf_converter: auto
+
+# AioSandbox (Docker) — requires Cloudron `docker` addon and CLOUDRON_DOCKER_HOST.
+sandbox:
+  use: deerflow.community.aio_sandbox:AioSandboxProvider
+  bash_output_max_chars: 20000
+  read_file_output_max_chars: 50000
+  ls_output_max_chars: 20000
+
+skills:
+  path: /app/code/skills
+  container_path: /mnt/skills
+
+title:
+  enabled: true
+  max_words: 6
+  max_chars: 60
+  model_name: null
+
+summarization:
+  enabled: true
+  model_name: null
+
+memory:
+  enabled: true
+  storage_path: memory.json
+  debounce_seconds: 30
+  model_name: null
+  max_facts: 100
+  fact_confidence_threshold: 0.7
+  injection_enabled: true
+  max_injection_tokens: 2000
+
+agents_api:
+  enabled: false
+
+skill_evolution:
+  enabled: false
+  moderation_model_name: null
+
+# Overridden at boot when CLOUDRON_POSTGRESQL_URL is set (see merge_runtime_config.py)
+checkpointer:
+  type: sqlite
+  connection_string: /app/data/deer-flow/checkpoints.db

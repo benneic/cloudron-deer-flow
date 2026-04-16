@@ -1,0 +1,20 @@
+# Optional: weekly reminder to compare DEERFLOW_VERSION with upstream releases.
+name: upstream-version-reminder
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 8 * * 1"
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show pinned vs latest release
+        run: |
+          set -euo pipefail
+          pinned="$(tr -d '\n' < DEERFLOW_VERSION)"
+          echo "Pinned in repo: ${pinned}"
+          curl -fsSL "https://api.github.com/repos/bytedance/deer-flow/releases/latest" | jq -r '"Latest GitHub release tag: " + (.tag_name // "none")'
+          echo "If they differ, follow RELEASING.md to bump the pin and CloudronManifest.json."

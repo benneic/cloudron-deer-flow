@@ -1,0 +1,19 @@
+{
+  "id": "org.deerflow.cloudron",
+  "title": "DeerFlow",
+  "author": "Cloudron packager (see repository)",
+  "description": "DeerFlow 2.0 super-agent harness (Next.js + Gateway, gateway mode). Uses Better Auth, optional PostgreSQL checkpointer, and Docker-backed AioSandbox when the docker addon is enabled.",
+  "tagline": "Research, code, and create with DeerFlow on Cloudron",
+  "version": "1.0.0",
+  "upstreamVersion": "v2.0-m1",
+  "healthCheckPath": "/health",
+  "httpPort": 8000,
+  "memoryLimit": 8589934592,
+  "addons": {
+    "localstorage": {},
+    "postgresql": {},
+    "docker": {}
+  },
+  "manifestVersion": 2,
+  "postInstallMessage": "## DeerFlow on Cloudron\n\n1. **Models**: Edit `/app/data/config.yaml` (File manager) and add at least one entry under `models:` with your provider API keys, or set environment variables referenced from config. Full option reference: [master `config.example.yaml`](https://raw.githubusercontent.com/bytedance/deer-flow/refs/heads/main/config.example.yaml). See also [Install.md](https://github.com/bytedance/deer-flow/blob/main/Install.md).\n\n2. **Docker addon**: This package targets **AioSandbox** (browser/shell/VS Code–class tools in isolated containers). The Cloudron **docker** addon is **superadmin-only**. Ensure `CLOUDRON_DOCKER_HOST` is set and the sandbox image can be pulled from your network (consider mirroring the default Volcengine image).\n\n3. **PostgreSQL**: When the `postgresql` addon is enabled, the app writes a Postgres **LangGraph checkpointer** block into `config.yaml` on each start from `CLOUDRON_POSTGRESQL_URL`.\n\n4. **Security**: DeerFlow is powerful (shell, files, arbitrary containers). Use strong credentials, keep the app private, and read the upstream security notice.\n\n5. **Skill**: A `cloudron-postgresql` skill is installed under `/app/code/skills/cloudron-postgresql` for agent documentation on using the database addon.\n"
+}
