@@ -8,9 +8,8 @@
 
 config_version: 7
 log_level: info
-
 token_usage:
-  enabled: false
+  enabled: true
 
 models:
   # Change `model` to a tag you have pulled in Ollama (e.g. llama3.2, qwen2.5).
@@ -94,6 +93,18 @@ title:
 summarization:
   enabled: true
   model_name: null
+  trigger:
+  - type: tokens
+    value: 31128
+  - type: messages
+    value: 50
+  - type: fraction
+    value: 0.8
+  keep:
+    type: messages
+    value: 10
+  trim_tokens_to_summarize: 15564
+
 
 memory:
   enabled: true
