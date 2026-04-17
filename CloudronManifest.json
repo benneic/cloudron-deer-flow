@@ -4,6 +4,7 @@
   "author": "Cloudron packager (see repository)",
   "description": "DeerFlow 2.0 super-agent harness (Next.js + Gateway, gateway mode). Uses Better Auth, optional PostgreSQL checkpointer, and Docker-backed AioSandbox when the docker addon is enabled.",
   "tagline": "Research, code, and create with DeerFlow on Cloudron",
+  "icon": "file://cloudron/icon.png",
   "version": "1.0.0",
   "upstreamVersion": "v2.0-m1",
   "healthCheckPath": "/health",
