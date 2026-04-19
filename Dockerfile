@@ -17,6 +17,8 @@ FROM node:22-bookworm AS frontend-build
 ARG NPM_REGISTRY
 WORKDIR /build
 COPY --from=fetch /src/repo/frontend ./frontend
+# Explicit better-auth baseURL + runtime JSON (see cloudron/scripts/write_frontend_better_auth_env.py).
+COPY cloudron/patches/better-auth-config.ts ./frontend/src/server/better-auth/config.ts
 RUN if [ -n "${NPM_REGISTRY}" ]; then export COREPACK_NPM_REGISTRY="${NPM_REGISTRY}"; fi \
   && corepack enable && corepack install -g pnpm@10.26.2 \
   && if [ -n "${NPM_REGISTRY}" ]; then pnpm config set registry "${NPM_REGISTRY}"; fi \
@@ -37,7 +39,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     git \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=uv-source /uv /uvx /usr/local/bin/
-WORKDIR /build
+# Build the venv at the same path as runtime (/app/code/backend) so editable installs and .pth
+# links resolve; a venv built under /build/... breaks with ModuleNotFoundError for deerflow.
+WORKDIR /app/code
 COPY --from=fetch /src/repo/backend ./backend
 # Plain RUN (no BuildKit --mount cache): remote Cloudron/docker builders often run without BuildKit.
 RUN cd backend && UV_INDEX_URL="${UV_INDEX_URL:-https://pypi.org/simple}" uv sync --frozen \
@@ -90,7 +94,7 @@ WORKDIR /app/code
 # Application tree
 COPY --from=fetch /src/repo/skills ./skills
 COPY --from=fetch /src/repo/config.example.yaml /app/code/config.example.yaml
-COPY --from=backend-build /build/backend ./backend
+COPY --from=backend-build /app/code/backend ./backend
 COPY --from=frontend-build /build/frontend ./frontend
 
 # Cloudron-specific files (this packaging repo)
@@ -98,11 +102,16 @@ COPY start.sh /app/code/start.sh
 COPY supervisord.conf /app/code/supervisord.conf
 COPY nginx/nginx.conf.template /app/code/nginx/nginx.conf.template
 COPY cloudron/scripts/merge_runtime_config.py /app/code/cloudron/scripts/merge_runtime_config.py
+COPY cloudron/scripts/write_frontend_better_auth_env.py /app/code/cloudron/scripts/write_frontend_better_auth_env.py
 COPY cloudron/default-config.yaml /app/code/cloudron/default-config.yaml
 COPY cloudron/default-extensions_config.json /app/code/cloudron/default-extensions_config.json
+COPY cloudron/run-frontend.sh /app/code/cloudron/run-frontend.sh
 COPY skills/cloudron-postgresql /app/code/skills/cloudron-postgresql
 
-RUN chmod +x /app/code/start.sh /app/code/cloudron/scripts/merge_runtime_config.py \
+RUN chmod +x /app/code/start.sh /app/code/cloudron/run-frontend.sh \
+    /app/code/cloudron/scripts/merge_runtime_config.py /app/code/cloudron/scripts/write_frontend_better_auth_env.py \
+  && mkdir -p /app/code/backend/.langgraph_api \
+  && chown cloudron:cloudron /app/code/backend/.langgraph_api \
   && printf '%s\n' "${DEERFLOW_VERSION}" > /app/code/DEERFLOW_UPSTREAM_VERSION
 
 ENV DEER_FLOW_REPO_ROOT=/app/code \

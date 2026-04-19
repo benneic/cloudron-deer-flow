@@ -16,16 +16,14 @@ You do **not** need to understand Docker or coding to operate the app day to day
 
 ## Before you install
 
-1. **Server resources**  
-   DeerFlow is heavy. This package sets a **8 GB memory** limit in the manifest; your Cloudron server should have enough RAM for that plus the rest of your apps.
-
+1. **Server resources**
+  DeerFlow is heavy. This package sets a **8 GB memory** limit in the manifest; your Cloudron server should have enough RAM for that plus the rest of your apps.
 2. **Addons** (chosen when you install or later in the app’s **Storage / Services** area):
-   - **Local storage** — required (this is normal for most Cloudron apps).
-   - **PostgreSQL** — optional; used for LangGraph “checkpoint” data when enabled.
-   - **Docker** — optional; **only super-admins** can enable it on many Cloudron servers. It powers DeerFlow’s **AioSandbox** (stronger isolation for tools). If you skip it, you may need to change sandbox settings in `config.yaml` (advanced).
-
-3. **AI backend**  
-   The default config uses **Ollama** on your network (no cloud API key required). You can switch to hosted APIs (OpenAI, Anthropic, OpenRouter, etc.) in **`config.yaml`** instead—see [AI models and keys](#3-ai-models-and-keys).
+  - **Local storage** — required (this is normal for most Cloudron apps).
+  - **PostgreSQL** — optional; used for LangGraph “checkpoint” data when enabled.
+  - **Docker** — optional; **only super-admins** can enable it on many Cloudron servers. It powers DeerFlow’s **AioSandbox** (stronger isolation for tools). If you skip it, you may need to change sandbox settings in `config.yaml` (advanced).
+3. **AI backend**
+  The default config uses **Ollama** on your network (no cloud API key required). You can switch to hosted APIs (OpenAI, Anthropic, OpenRouter, etc.) in `**config.yaml`** instead—see [AI models and keys](#3-ai-models-and-keys).
 
 ---
 
@@ -33,7 +31,7 @@ You do **not** need to understand Docker or coding to operate the app day to day
 
 Packagers and developers build from this repo and push an image, or use Cloudron’s build flow. If you received a pre-built app package, install it from the Cloudron App Store or from your administrator’s instructions.
 
-Technical build/update steps: see [`RELEASING.md`](RELEASING.md).
+Technical build/update steps: see `[RELEASING.md](RELEASING.md)`.
 
 ---
 
@@ -43,7 +41,7 @@ Technical build/update steps: see [`RELEASING.md`](RELEASING.md).
 
 DeerFlow’s login system (**Better Auth**) needs the **public URL** of the app (same address you type in the browser, starting with `https://`).
 
-**On Cloudron you usually do nothing here.** This package sets **`BETTER_AUTH_BASE_URL`** from Cloudron’s built-in **`CLOUDRON_APP_ORIGIN`** at startup when you have not set `BETTER_AUTH_BASE_URL` yourself. That value is the correct HTTPS origin for your app behind Cloudron’s reverse proxy.
+**On Cloudron you usually do nothing here.** Before the process manager starts, `**start.sh`** runs `**cloudron/scripts/write_frontend_better_auth_env.py**`, which reads the container environment and writes `**/run/supervisor/frontend_cloudron.env**` (for the shell) and `**/run/supervisor/frontend_cloudron_next.json**` (for Better Auth). Resolution order: `**BETTER_AUTH_BASE_URL**` from `cloudron env`, else `**CLOUDRON_APP_ORIGIN**`, else `**https://` + `CLOUDRON_APP_DOMAIN**` (see the [cheat sheet](https://docs.cloudron.io/packaging/cheat-sheet/#environment-variables)). The packaged frontend replaces `**src/server/better-auth/config.ts**` so `**baseURL**` is read from that JSON at runtime; Next’s production build can otherwise inline empty `**process.env.BETTER_AUTH_BASE_URL**` from build time.
 
 **When to set it manually** (in the app **Environment** screen or via `cloudron env set`):
 
@@ -65,35 +63,33 @@ Use one canonical URL (no trailing slash unless your upstream docs require it).
 
 ### 3. AI models and keys
 
-The packaged default **`/app/data/config.yaml`** includes **one Ollama model** so you can run without cloud API keys if you already use [Ollama](https://ollama.com/) on your network.
+The packaged default `**/app/data/config.yaml`** includes **one Ollama model** so you can run without cloud API keys if you already use [Ollama](https://ollama.com/) on your network.
 
 **Ollama (default in this package)**
 
 1. Install and run Ollama on a machine that this Cloudron server can reach (another PC, a LAN server, NAS, etc.).
-2. Open the app **File manager** and edit **`/app/data/config.yaml`**.
-3. Under **`models:`**, find the **`ollama`** entry and set **`base_url`** to that machine’s address and port **`11434`**.  
-   Do **not** use `http://127.0.0.1:11434` here: inside the app container, “localhost” is the container itself, not your home PC. Use a **LAN IP** (e.g. `http://192.168.1.50:11434`), **Tailscale IP**, or similar. Adjust **`model`** to match a model you have pulled in Ollama (e.g. `llama3.2`, `qwen2.5`).
-
-
+2. Open the app **File manager** and edit `**/app/data/config.yaml`**.
+3. Under `**models:**`, find the `**ollama**` entry and set `**base_url**` to that machine’s address and port `**11434**`.
+  Do **not** use `http://127.0.0.1:11434` here: inside the app container, “localhost” is the container itself, not your home PC. Use a **LAN IP** (e.g. `http://192.168.1.50:11434`), **Tailscale IP**, or similar. Adjust `**model`** to match a model you have pulled in Ollama (e.g. `llama3.2`, `qwen2.5`).
 
 **Other providers (OpenAI, Anthropic, OpenRouter, …)**
 
-Add or replace models under **`models:`** and put API keys in the app’s **Environment** (or reference variables like `$OPENAI_API_KEY` from config). The **master reference** for every option is upstream’s  
+Add or replace models under `**models:`** and put API keys in the app’s **Environment** (or reference variables like `$OPENAI_API_KEY` from config). The **master reference** for every option is upstream’s  
 [master `config.example.yaml` (raw)](https://raw.githubusercontent.com/bytedance/deer-flow/refs/heads/main/config.example.yaml).  
 Also: [browse on GitHub](https://github.com/bytedance/deer-flow/blob/main/config.example.yaml) and [Install.md](https://github.com/bytedance/deer-flow/blob/main/Install.md).
 
 ### 4. Optional: environment variables for tools
 
-Many tools (search, fetch, etc.) read keys from the environment (e.g. `TAVILY_API_KEY`, `JINA_API_KEY`). Add them the same way as other custom variables ([dashboard **Environment** or `cloudron env set`](#how-cloudron-handles-environment-variables)).
+Many tools (search, fetch, etc.) read keys from the environment (e.g. `TAVILY_API_KEY`, `JINA_API_KEY`). Add them the same way as other custom variables ([dashboard **Environment** or `cloudron env set](#how-cloudron-handles-environment-variables)`).
 
 ---
 
 ## PostgreSQL (optional)
 
-If the **PostgreSQL** addon is enabled, the app automatically updates **`/app/data/config.yaml`** on startup to use the database for LangGraph checkpoint storage. You normally do **not** edit the connection string by hand.
+If the **PostgreSQL** addon is enabled, the app automatically updates `**/app/data/config.yaml`** on startup to use the database for LangGraph checkpoint storage. You normally do **not** edit the connection string by hand.
 
 A short guide for agents and operators lives in the bundled skill:  
-[`skills/cloudron-postgresql/SKILL.md`](skills/cloudron-postgresql/SKILL.md).
+`[skills/cloudron-postgresql/SKILL.md](skills/cloudron-postgresql/SKILL.md)`.
 
 ---
 
@@ -105,10 +101,14 @@ Full **browser- and container-style** sandbox features expect the **Docker** add
 
 ## Where your data lives
 
-| Location | What |
-|----------|------|
-| `/app/data/` | Main persistent data: config, Better Auth secret file, agent home, etc. |
+
+| Location         | What                                                                      |
+| ---------------- | ------------------------------------------------------------------------- |
+| `/app/data/`     | Main persistent data: config, Better Auth secret file, agent home, etc.   |
 | Cloudron backups | Include app data; PostgreSQL is backed up separately if that addon is on. |
+
+
+**Read-only `/app/code`:** On Cloudron, application files under `/app/code` are **read-only** in production. You cannot create new files or symlinks there unless the app manifest declares a `[runtimeDirs](https://docs.cloudron.io/packaging/manifest/#runtimedirs)` path. This package declares `**/app/code/backend/.langgraph_api`** so LangGraph can write its runtime metadata there. That directory is writable but **not** persisted across app **updates** the same way `/app/data` is—your threads and settings still live under `**/app/data`** and the database addon as usual.
 
 Use Cloudron’s **backup** features for the app and database as usual.
 
@@ -117,14 +117,14 @@ Use Cloudron’s **backup** features for the app and database as usual.
 ## Updating
 
 When your packager publishes a new version: update the app from the Cloudron dashboard (or CLI) like any other Cloudron app.  
-Version pins and upstream DeerFlow tags are described in [`RELEASING.md`](RELEASING.md) and [`CHANGELOG.md`](CHANGELOG.md).
+Version pins and upstream DeerFlow tags are described in `[RELEASING.md](RELEASING.md)` and `[CHANGELOG.md](CHANGELOG.md)`.
 
 ---
 
 ## Help and upstream
 
 - **DeerFlow** (features, models, safety): [bytedance/deer-flow](https://github.com/bytedance/deer-flow)  
-- **Master DeerFlow `config.example.yaml`** (full schema and comments): [raw on `main`](https://raw.githubusercontent.com/bytedance/deer-flow/refs/heads/main/config.example.yaml)  
+- **Master DeerFlow `config.example.yaml`** (full schema and comments): [raw on `main](https://raw.githubusercontent.com/bytedance/deer-flow/refs/heads/main/config.example.yaml)`  
 - **Cloudron packaging** (including [environment variables cheat sheet](https://docs.cloudron.io/packaging/cheat-sheet/#environment-variables)): [Cloudron docs — packaging](https://docs.cloudron.io/packaging/)  
 - **This package** issues: use this repository’s issue tracker if your administrator or packager points you here.
 
@@ -132,4 +132,4 @@ Version pins and upstream DeerFlow tags are described in [`RELEASING.md`](RELEAS
 
 ## License
 
-See [`LICENSE`](LICENSE). DeerFlow itself is MIT-licensed upstream; this packaging repo adds its own files under the same spirit—check the repository for details.
+See `[LICENSE](LICENSE)`. DeerFlow itself is MIT-licensed upstream; this packaging repo adds its own files under the same spirit—check the repository for details.

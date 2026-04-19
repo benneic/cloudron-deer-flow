@@ -9,6 +9,8 @@
 5. Add an entry to [`CHANGELOG.md`](CHANGELOG.md) (upstream tag, notable manifest or config changes).
 6. If upstream bumped `config_version` in `config.example.yaml`, run upstream’s `make config-upgrade` guidance for existing installs, or document manual merge steps in the changelog. The current upstream master template is [`config.example.yaml` on `main`](https://raw.githubusercontent.com/bytedance/deer-flow/refs/heads/main/config.example.yaml).
 
+The manifest includes [`runtimeDirs`](https://docs.cloudron.io/packaging/manifest/#runtimedirs) so LangGraph can write under `/app/code/backend/.langgraph_api` without breaking Cloudron’s read-only `/app/code` rule—do not replace that with symlinks from `/app/data`.
+
 ## Build and deploy
 
 From the repository root (with the [Cloudron CLI](https://docs.cloudron.io/packaging/) logged in):

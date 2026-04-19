@@ -4,16 +4,12 @@ set -euo pipefail
 PORT="${PORT:-8000}"
 export PORT
 
-# Better Auth public URL: Cloudron injects CLOUDRON_APP_ORIGIN (see packaging cheat sheet).
-# If unset (e.g. local testing), leave BETTER_AUTH_BASE_URL unset unless the operator set it.
-if [[ -z "${BETTER_AUTH_BASE_URL:-}" && -n "${CLOUDRON_APP_ORIGIN:-}" ]]; then
-  export BETTER_AUTH_BASE_URL="${CLOUDRON_APP_ORIGIN}"
-fi
-# Supervisord requires %(ENV_BETTER_AUTH_BASE_URL)s to exist; default to empty off-Cloudron.
-export BETTER_AUTH_BASE_URL="${BETTER_AUTH_BASE_URL:-}"
-
 mkdir -p /app/data/deer-flow /app/data/home /run/nginx /run/supervisor
-chown -R cloudron:cloudron /app/data
+# Nginx runs as cloudron; it must not mkdir() under /run/nginx as non-root (permission denied).
+mkdir -p /run/nginx/client_temp /run/nginx/proxy_temp /run/nginx/fastcgi_temp /run/nginx/uwsgi_temp /run/nginx/scgi_temp
+: >>/run/nginx/access.log 2>/dev/null || true
+: >>/run/nginx/error.log 2>/dev/null || true
+chown -R cloudron:cloudron /app/data /run/nginx
 
 # Better Auth secret (persist across restarts)
 _secret="/app/data/.better-auth-secret"
@@ -40,11 +36,10 @@ if [[ ! -f /app/data/extensions_config.json ]]; then
   chown cloudron:cloudron /app/data/extensions_config.json
 fi
 
-# LangGraph API metadata directory (writable)
-mkdir -p /app/data/langgraph_api
-rm -rf /app/code/backend/.langgraph_api
-ln -sfn /app/data/langgraph_api /app/code/backend/.langgraph_api
-chown -h cloudron:cloudron /app/code/backend/.langgraph_api 2>/dev/null || true
+# LangGraph API runtime files — must live under a path Cloudron marks writable (see CloudronManifest.json
+# `runtimeDirs`). /app/code is read-only; we cannot symlink into it from /app/data.
+mkdir -p /app/code/backend/.langgraph_api
+chown -R cloudron:cloudron /app/code/backend/.langgraph_api
 
 # Cloudron docker addon → Docker CLI
 if [[ -n "${CLOUDRON_DOCKER_HOST:-}" ]]; then
@@ -62,14 +57,23 @@ if [[ -f /sys/fs/cgroup/cgroup.controllers ]]; then
 else
   memory_limit="$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo 268435456)"
 fi
-export GATEWAY_WORKERS
 GATEWAY_WORKERS=$((memory_limit / 1024 / 1024 / 150))
 GATEWAY_WORKERS=$((GATEWAY_WORKERS > 8 ? 8 : GATEWAY_WORKERS))
 GATEWAY_WORKERS=$((GATEWAY_WORKERS < 1 ? 1 : GATEWAY_WORKERS))
+# Postgres LangGraph checkpointer runs migrations at import; multiple uvicorn workers
+# race and hit UniqueViolation (e.g. pg_type_typname_nsp_index / checkpoint_migrations_pkey).
+if [[ -n "${CLOUDRON_POSTGRESQL_URL:-}" ]]; then
+  GATEWAY_WORKERS=1
+fi
+export GATEWAY_WORKERS
 
 # Nginx: gateway mode — LangGraph compat on same uvicorn
 export LANGGRAPH_UPSTREAM="127.0.0.1:8001"
 export LANGGRAPH_REWRITE="/api/"
 envsubst '$PORT $LANGGRAPH_UPSTREAM $LANGGRAPH_REWRITE' </app/code/nginx/nginx.conf.template >/run/nginx/nginx.conf
+
+# Supervisord [program:frontend] replaces the child environment. Capture Better Auth URLs from
+# the full container env (Python sees the same dict as PID1 had before exec supervisord).
+python3 /app/code/cloudron/scripts/write_frontend_better_auth_env.py
 
 exec /usr/bin/supervisord -c /app/code/supervisord.conf

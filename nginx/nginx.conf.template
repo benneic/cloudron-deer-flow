@@ -9,8 +9,9 @@ http {
     keepalive_timeout 65;
     types_hash_max_size 2048;
 
-    access_log /dev/stdout;
-    error_log /dev/stderr;
+    # cloudron user cannot open /dev/stdout for access_log in this environment (EACCES).
+    access_log /run/nginx/access.log;
+    error_log /run/nginx/error.log warn;
 
     client_body_temp_path /run/nginx/client_temp;
     proxy_temp_path /run/nginx/proxy_temp;

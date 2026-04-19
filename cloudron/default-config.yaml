@@ -93,13 +93,14 @@ title:
 summarization:
   enabled: true
   model_name: null
+  # Do not use `type: fraction` with Ollama/local models: LangChain needs a model
+  # `profile` with max_input_tokens (unavailable for ChatOllama). Use `tokens` and/or
+  # `messages` triggers only, or disable summarization.
   trigger:
   - type: tokens
     value: 31128
   - type: messages
     value: 50
-  - type: fraction
-    value: 0.8
   keep:
     type: messages
     value: 10
